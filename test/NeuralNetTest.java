@@ -17,10 +17,8 @@ public class NeuralNetTest {
         };
 
         NeuralNet testNeuralNet = new NeuralNet(2);
-        testNeuralNet.outputNeuron.setWeights(outputNeuronWeights);
-        for (int i = 0; i < testNeuralNet.hiddenNeurons.size(); i++) {
-            testNeuralNet.hiddenNeurons.get(i).setWeights(hiddenNeuronWeights[i]);
-        }
+        testNeuralNet.setOutputWeight(outputNeuronWeights);
+        testNeuralNet.setHiddenWeight(hiddenNeuronWeights);
 
         assertEquals("0.548", String.format("%.3f",testNeuralNet.outputFor(inputVector)));
     }

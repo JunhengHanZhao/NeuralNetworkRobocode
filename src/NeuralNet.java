@@ -2,52 +2,74 @@ import Interface.NeuralNetInterface;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 
 public class NeuralNet implements NeuralNetInterface {
 
-    public Neuron outputNeuron;
-    public ArrayList<Neuron> hiddenNeurons;
-
     private int inputNum;
     private double[] inputs;
+    private double [] hiddenOutput;
+    private double [] outputWeights;
+    private double [][] hiddenWeights;
+    private double output;
+
     private final int hiddenNum = 4;
     private final double learningRate = 0.2;
     private final double momentum = 0;
     private final double errorTarget = 0.05;
-    private double [] outputWeights;
-    private double [][] hiddenWeights;
 
     public NeuralNet(int inputNum) {
         this.inputNum = inputNum;
 
-        // populate hidden layer
-        hiddenNeurons = new ArrayList<>();
-        for (int i = 0; i < hiddenNum; i++) {
-            hiddenNeurons.add(new Neuron(inputNum));
-        }
-
-        // the input of output neuron are hidden neurons
-        this.outputNeuron = new Neuron(hiddenNum);
+        //Initialize weights to all 0
+        zeroWeights();
     }
+
+    public void setOutputWeight(double[] outputWeights) {
+        if (outputWeights.length != hiddenNum + 1) {
+            throw new ArrayIndexOutOfBoundsException();
+        } else {
+            this.outputWeights = outputWeights;
+        }
+    }
+
+    public void setHiddenWeight(double[][] hiddenWeights) {
+        if (hiddenWeights.length!=hiddenNum || hiddenWeights[0].length!=inputNum+1) {
+            throw new ArrayIndexOutOfBoundsException();
+        } else {
+            this.hiddenWeights = hiddenWeights;
+        }
+    }
+
 
     //forward propagation
     @Override
     public double outputFor(double[] X) {
-        // check if input vector length match
-        if (X.length != inputNum) {
+        // check the size of weights
+        if (outputWeights.length != hiddenNum + 1 || hiddenWeights.length != hiddenNum || hiddenWeights[0].length != inputNum + 1) {
             throw new ArrayIndexOutOfBoundsException();
         } else {
-            // store the input for debugging
+            // begin forward propagation
             this.inputs = X;
-            // the output array of all hidden neurons
-            double[] hiddenOutput = new double[hiddenNum];
-            // compute the output of each hidden neuron and populate the array
-            for (int i = 0; i < hiddenNeurons.size(); i++) {
-                hiddenOutput[i] = sigmoid(hiddenNeurons.get(i).output(X));
+
+            // compute the hidden layer
+            double [] hiddenOutput = new double[hiddenNum];
+            for (int i = 0; i < hiddenNum; i++) {
+                hiddenOutput[i] = hiddenWeights[i][0] * bias;
+                for (int j = 1; j < inputNum + 1; j++) {
+                    hiddenOutput[i] += hiddenWeights[i][j] * inputs[j-1];
+                }
+                hiddenOutput[i] = sigmoid(hiddenOutput[i]);
+                this.hiddenOutput = hiddenOutput;
             }
-            // use hidden neuron output as input
-            return sigmoid(outputNeuron.output(hiddenOutput));
+
+            // compute the output layer
+            double output = outputWeights[0] * bias;
+            for (int i = 1; i < hiddenNum + 1; i++) {
+                output += outputWeights[i] * this.hiddenOutput[i-1];
+            }
+            output = sigmoid(output);
+            this.output = output;
+            return output;
         }
     }
 
@@ -55,25 +77,38 @@ public class NeuralNet implements NeuralNetInterface {
     public double train(double[] X, double argValue) {
         // compute forward propagation result for this training
         double currentOutput = outputFor(X);
+        double currentHiddenOutputs[] = hiddenOutput;
 
         // store current weights for computation
-        double[] currentOutputWeights = outputNeuron.getWeights();
-        double[][] currentHiddenWeights = new double [4][inputNum +1];
-        for (int i=0; i<hiddenNum; i++) {
-            currentHiddenWeights[i] = hiddenNeurons.get(i).getWeights();
+        double[] currentOutputWeights = outputWeights;
+        double[][] currentHiddenWeights = hiddenWeights;
+
+        // perform error back propagation
+        // the order is reversed because the bottom weights depends on top results
+        // set the new weight for output neuron
+        double newOutputWeights[] = new double[hiddenNum + 1];
+        double outputError = currentOutput * (1 - currentOutput) * (argValue - currentOutput);
+        newOutputWeights[0] = currentOutputWeights[0] + learningRate * outputError * bias;
+        for (int i = 0; i < hiddenNum; i++) {
+            newOutputWeights[i] = currentOutputWeights[i+1] + learningRate * outputError * currentHiddenOutputs[i];
         }
 
-        // set the new weight for output neuron
-
-
-//        double outputNeuronNewWeight[] = new double[hiddenNum + 1];
-//        for (int i=0; i<hiddenNum + 1; i++) {
-//            outputNeuronNewWeight[i] = outputNeuron.getWeights()[i] + learningRate * currentOutput * (1 - currentOutput) * (argValue - currentOutput);
-//        }
-//        outputNeuron.setWeights(outputNeuronNewWeight);
-
         // set the new weight for hidden neurons
+        double newHiddenWeights[][] = new double[hiddenNum][inputNum + 1];
+        for (int i = 0; i < hiddenNum; i++) {
+            newHiddenWeights[i][0] = currentHiddenWeights [i][0] + learningRate * currentHiddenOutputs[i] * (1 - currentHiddenOutputs[i]) * outputError * newOutputWeights[i] * bias;
+            for (int j = 0; j < inputNum; j++) {
+                newHiddenWeights[i][j] = currentHiddenWeights[i][j + 1] + learningRate * currentHiddenOutputs[i] * (1 - currentHiddenOutputs[i]) * outputError * newOutputWeights[i] * inputs [j];
+            }
 
+        }
+
+        // change the weights in the field
+        outputWeights = newOutputWeights;
+        hiddenWeights = newHiddenWeights;
+
+        // compute the new output
+        return outputFor(inputs);
     }
 
     @Override
@@ -102,45 +137,31 @@ public class NeuralNet implements NeuralNetInterface {
 
     @Override
     public void initializeWeights() {
-        // initialize weight for output neuron
-        double[] outputNeuronWeights = new double[hiddenNum +1];
+        // set weight for output neuron
         for (int i = 0; i < hiddenNum + 1; i++) {
-            outputNeuronWeights[i] = Math.random() - 0.5;
+            outputWeights[i] = Math.random() - 0.5;
         }
-        outputNeuron.setWeights(outputNeuronWeights);
 
-        // initialize weight for input neuron
-        double[][] hiddenNeuronWeights = new double [hiddenNum][inputNum + 1];
+        // set weight for hidden neuron
         for (int i = 0; i < hiddenNum; i++) {
             for (int j = 0; j < inputNum + 1; j++) {
-                hiddenNeuronWeights[i][j] = Math.random() - 0.5;
+                hiddenWeights[i][j] = Math.random() - 0.5;
             }
-        }
-
-        for (int k = 0; k < hiddenNeurons.size(); k++) {
-            hiddenNeurons.get(k).setWeights(hiddenNeuronWeights[k]);
         }
     }
 
     @Override
     public void zeroWeights() {
         // set weight for output neuron
-        double[] outputNeuronWeights = new double[hiddenNum +1];
         for (int i = 0; i < hiddenNum + 1; i++) {
-            outputNeuronWeights[i] = 0;
+            outputWeights[i] = 0;
         }
-        outputNeuron.setWeights(outputNeuronWeights);
 
-        // set weight for input neuron
-        double[][] hiddenNeuronWeights = new double [hiddenNum][inputNum + 1];
+        // set weight for hidden neuron
         for (int i = 0; i < hiddenNum; i++) {
             for (int j = 0; j < inputNum + 1; j++) {
-                hiddenNeuronWeights[i][j] = 0;
+                hiddenWeights[i][j] = 0;
             }
-        }
-
-        for (int k = 0; k < hiddenNeurons.size(); k++) {
-            hiddenNeurons.get(k).setWeights(hiddenNeuronWeights[k]);
         }
     }
 }
