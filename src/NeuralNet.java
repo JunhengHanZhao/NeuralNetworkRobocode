@@ -20,26 +20,14 @@ public class NeuralNet implements NeuralNetInterface {
     public NeuralNet(int inputNum) {
         this.inputNum = inputNum;
 
+        outputWeights = new double[hiddenNum + 1];
+        hiddenOutput = new double[hiddenNum];
+        hiddenWeights = new double[hiddenNum][inputNum + 1];
+
+
         //Initialize weights to all 0
         zeroWeights();
     }
-
-    public void setOutputWeight(double[] outputWeights) {
-        if (outputWeights.length != hiddenNum + 1) {
-            throw new ArrayIndexOutOfBoundsException();
-        } else {
-            this.outputWeights = outputWeights;
-        }
-    }
-
-    public void setHiddenWeight(double[][] hiddenWeights) {
-        if (hiddenWeights.length!=hiddenNum || hiddenWeights[0].length!=inputNum+1) {
-            throw new ArrayIndexOutOfBoundsException();
-        } else {
-            this.hiddenWeights = hiddenWeights;
-        }
-    }
-
 
     //forward propagation
     @Override
@@ -52,14 +40,13 @@ public class NeuralNet implements NeuralNetInterface {
             this.inputs = X;
 
             // compute the hidden layer
-            double [] hiddenOutput = new double[hiddenNum];
             for (int i = 0; i < hiddenNum; i++) {
                 hiddenOutput[i] = hiddenWeights[i][0] * bias;
                 for (int j = 1; j < inputNum + 1; j++) {
                     hiddenOutput[i] += hiddenWeights[i][j] * inputs[j-1];
                 }
+                // activation function
                 hiddenOutput[i] = sigmoid(hiddenOutput[i]);
-                this.hiddenOutput = hiddenOutput;
             }
 
             // compute the output layer
@@ -67,6 +54,7 @@ public class NeuralNet implements NeuralNetInterface {
             for (int i = 1; i < hiddenNum + 1; i++) {
                 output += outputWeights[i] * this.hiddenOutput[i-1];
             }
+            // activation function
             output = sigmoid(output);
             this.output = output;
             return output;
@@ -76,29 +64,32 @@ public class NeuralNet implements NeuralNetInterface {
     @Override
     public double train(double[] X, double argValue) {
         // compute forward propagation result for this training
-        double currentOutput = outputFor(X);
-        double currentHiddenOutputs[] = hiddenOutput;
-
-        // store current weights for computation
-        double[] currentOutputWeights = outputWeights;
-        double[][] currentHiddenWeights = hiddenWeights;
+        outputFor(X);
 
         // perform error back propagation
-        // the order is reversed because the bottom weights depends on top results
+        // compute the output wight first then the hidden weights because bottom weights depends on top results
         // set the new weight for output neuron
-        double newOutputWeights[] = new double[hiddenNum + 1];
-        double outputError = currentOutput * (1 - currentOutput) * (argValue - currentOutput);
-        newOutputWeights[0] = currentOutputWeights[0] + learningRate * outputError * bias;
-        for (int i = 0; i < hiddenNum; i++) {
-            newOutputWeights[i] = currentOutputWeights[i+1] + learningRate * outputError * currentHiddenOutputs[i];
+        double newOutputWeights[] = new double[outputWeights.length];
+        // abstract the current output error
+        double outputError = output * (1 - output) * (argValue - output);
+//        double outputError = 0.5 * (1 - Math.pow(output, 2)) * (argValue - output);
+        // the part for bias term
+        newOutputWeights[0] = outputWeights[0] + learningRate * outputError * bias;
+        for (int i = 1; i < hiddenNum + 1; i++) {
+            newOutputWeights[i] = outputWeights[i] + learningRate * outputError * hiddenOutput[i-1];
         }
 
         // set the new weight for hidden neurons
         double newHiddenWeights[][] = new double[hiddenNum][inputNum + 1];
         for (int i = 0; i < hiddenNum; i++) {
-            newHiddenWeights[i][0] = currentHiddenWeights [i][0] + learningRate * currentHiddenOutputs[i] * (1 - currentHiddenOutputs[i]) * outputError * newOutputWeights[i] * bias;
-            for (int j = 0; j < inputNum; j++) {
-                newHiddenWeights[i][j] = currentHiddenWeights[i][j + 1] + learningRate * currentHiddenOutputs[i] * (1 - currentHiddenOutputs[i]) * outputError * newOutputWeights[i] * inputs [j];
+            // the part for bias term
+            // use the new output weight
+            double[] hiddenError = new double[hiddenNum];
+            hiddenError[i] = hiddenOutput[i] * (1 - hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
+//            hiddenError[i] = 0.5 * (1 - Math.pow(hiddenOutput[i], 2)) * outputError * newOutputWeights[i + 1];
+            newHiddenWeights[i][0] = hiddenWeights [i][0] + learningRate * hiddenError[i] * bias;
+            for (int j = 1; j < inputNum + 1; j++) {
+                newHiddenWeights[i][j] = hiddenWeights[i][j] + learningRate * hiddenError[i] * inputs[j-1];
             }
 
         }
@@ -108,7 +99,10 @@ public class NeuralNet implements NeuralNetInterface {
         hiddenWeights = newHiddenWeights;
 
         // compute the new output
-        return outputFor(inputs);
+        outputFor(inputs);
+
+        // compute the error
+        return output * (1 - output) * (argValue - output);
     }
 
     @Override
@@ -124,7 +118,7 @@ public class NeuralNet implements NeuralNetInterface {
     @Override
     //activation function
     public double sigmoid(double x) {
-        return (double)1 / (1 + Math.exp(-x));
+        return 1 / (1 + Math.exp(-x));
     }
 
     @Override
@@ -132,7 +126,7 @@ public class NeuralNet implements NeuralNetInterface {
     public double customSigmoid(double x) {
         Integer a = -1;
         Integer b = 1;
-        return (double)(b - a) / (1 + Math.exp(-x)) + a;
+        return (b - a) / (1 + Math.exp(-x)) + a;
     }
 
     @Override
@@ -164,4 +158,42 @@ public class NeuralNet implements NeuralNetInterface {
             }
         }
     }
+
+    public double[] getOutputWeights() {
+        return outputWeights;
+    }
+
+    public double[][] getHiddenWeights() {
+        return hiddenWeights;
+    }
+
+    public void setOutputWeight(double[] outputWeights) {
+        if (outputWeights.length != hiddenNum + 1) {
+            throw new ArrayIndexOutOfBoundsException();
+        } else {
+            this.outputWeights = outputWeights;
+        }
+    }
+
+    public void setHiddenWeight(double[][] hiddenWeights) {
+        if (hiddenWeights.length!=hiddenNum || hiddenWeights[0].length!=inputNum+1) {
+            throw new ArrayIndexOutOfBoundsException();
+        } else {
+            this.hiddenWeights = hiddenWeights;
+        }
+    }
+
+    public double loss(double[][] trainInputVectors, double[] trainTargetOutputs) {
+        double loss = 0.0;
+        if (trainInputVectors.length != trainTargetOutputs.length) {
+            throw new ArrayIndexOutOfBoundsException();
+        } else {
+            for (int i = 0; i < trainTargetOutputs.length; i++) {
+                double y = outputFor(trainInputVectors[i]);
+                loss += 0.5 * Math.pow(y - trainTargetOutputs[i], 2);
+            }
+            return loss;
+        }
+    }
+
 }

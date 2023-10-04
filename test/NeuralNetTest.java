@@ -21,6 +21,18 @@ public class NeuralNetTest {
         testNeuralNet.setHiddenWeight(hiddenNeuronWeights);
 
         assertEquals("0.548", String.format("%.3f",testNeuralNet.outputFor(inputVector)));
-    }
 
+        assertEquals("0.108", String.format("%.3f",testNeuralNet.train(inputVector,1)));
+
+        double[][] inputSets = {
+                {-1, -1},
+                {1, -1},
+                {-1, 1},
+                {1, 1}
+        };
+
+        double[] targetOutputs = {-1, 1, 1, -1};
+
+        System.out.println(testNeuralNet.loss(inputSets, targetOutputs));
+    }
 }
