@@ -26,21 +26,21 @@ public class Main {
         for (int k = 0; k < loops; k ++) {
             train.initializeWeights();
             int i = 1;
-            while (train.loss(inputSetsBi, targetOutputsBi) > targetAccuracy) {
-                for (int j = 0; j < targetOutputs.length; j++) {
-                    train.train(inputSetsBi[j], targetOutputsBi[j]);
-                    System.out.println("No of loop " + (k + 1) + ", No. of epochs " + i + ", with total loss " + train.loss(inputSets, targetOutputs));
-
-                }
-                i++;
-            }
-
-//            while (train.loss(inputSets, targetOutputs) > targetAccuracy) {
+//            while (train.loss(inputSetsBi, targetOutputsBi) > targetAccuracy) {
 //                for (int j = 0; j < targetOutputs.length; j++) {
-//                    train.train(inputSets[j], targetOutputs[j]);
+//                    train.train(inputSetsBi[j], targetOutputsBi[j]);
+//                    System.out.println("No of loop " + (k + 1) + ", No. of epochs " + i + ", with total loss " + train.loss(inputSets, targetOutputs));
+//
 //                }
 //                i++;
 //            }
+
+            while (train.loss(inputSets, targetOutputs) > targetAccuracy) {
+                for (int j = 0; j < targetOutputs.length; j++) {
+                    train.train(inputSets[j], targetOutputs[j]);
+                }
+                i++;
+            }
 
             System.out.println("No of loop " + (k + 1) + ", No. of epochs " + i + ", with total loss " + train.loss(inputSets, targetOutputs));
         }
