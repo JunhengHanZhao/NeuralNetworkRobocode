@@ -1,7 +1,7 @@
 public class Main {
     public static void main(String[] args) {
         double targetAccuracy = 0.05;
-        int loops = 10;
+        int loops = 10000;
 
         double[][] inputSetsBi = {
                 {-1, -1},
@@ -13,9 +13,9 @@ public class Main {
         double[] targetOutputsBi = {-1, 1, 1, -1};
 
         double[][] inputSets = {
-                {0, 0},
-                {1, 0},
-                {0, 1},
+                {-1, -1},
+                {1, -1},
+                {-1, 1},
                 {1, 1}
         };
 

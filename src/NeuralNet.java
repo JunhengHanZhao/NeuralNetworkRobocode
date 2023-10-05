@@ -11,12 +11,12 @@ public class NeuralNet implements NeuralNetInterface {
     private double [] outputWeights;
     private double [][] hiddenWeights;
     private double output;
+    private final int bipolar = 1;
 
     private final int hiddenNum = 4;
     private final double learningRate = 0.2;
     private final double momentum = 0;
     private final double errorTarget = 0.05;
-    private final double bias = 1.0;
 
     public NeuralNet(int inputNum) {
         this.inputNum = inputNum;
@@ -28,7 +28,6 @@ public class NeuralNet implements NeuralNetInterface {
 
         //Initialize weights to all 0
         zeroWeights();
-        initializeWeights();
     }
 
     //forward propagation
@@ -48,7 +47,7 @@ public class NeuralNet implements NeuralNetInterface {
                     hiddenOutput[i] += hiddenWeights[i][j] * inputs[j-1];
                 }
                 // activation function
-                hiddenOutput[i] = customSigmoid(hiddenOutput[i]);
+                hiddenOutput[i] = sigmoid(hiddenOutput[i]);
             }
 
             // compute the output layer
@@ -57,7 +56,7 @@ public class NeuralNet implements NeuralNetInterface {
                 output += outputWeights[i] * this.hiddenOutput[i-1];
             }
             // activation function
-            output = customSigmoid(output);
+            output = sigmoid(output);
             this.output = output;
             return output;
         }
@@ -73,7 +72,7 @@ public class NeuralNet implements NeuralNetInterface {
         // set the new weight for output neuron
         double newOutputWeights[] = new double[outputWeights.length];
         // abstract the current output error
-        double outputError = customSigmoidDerivative(output) * (argValue - output);
+        double outputError = output * (1 - output) * (argValue - output);
 //        double outputError = 0.5 * (1 - Math.pow(output, 2)) * (argValue - output);
         // the part for bias term
         newOutputWeights[0] = outputWeights[0] + learningRate * outputError * bias;
@@ -87,7 +86,7 @@ public class NeuralNet implements NeuralNetInterface {
             // the part for bias term
             // use the new output weight
             double[] hiddenError = new double[hiddenNum];
-            hiddenError[i] = customSigmoidDerivative(hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
+            hiddenError[i] = hiddenOutput[i] * (1 - hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
 //            hiddenError[i] = 0.5 * (1 - Math.pow(hiddenOutput[i], 2)) * outputError * newOutputWeights[i + 1];
             newHiddenWeights[i][0] = hiddenWeights [i][0] + learningRate * hiddenError[i] * bias;
             for (int j = 1; j < inputNum + 1; j++) {
@@ -103,8 +102,8 @@ public class NeuralNet implements NeuralNetInterface {
         // compute the new output
         outputFor(inputs);
 
-        // compute the new output error
-        return customSigmoidDerivative(output) * (argValue - output);
+        // compute the error
+        return output * (1 - output) * (argValue - output);
     }
 
     @Override
@@ -125,10 +124,15 @@ public class NeuralNet implements NeuralNetInterface {
 
     @Override
     //a custom activation function
+    /**
+     * This method implements a general sigmoid with asymptotes bounded by (a,b)
+     * @param x The input
+     * @return f(x) = b_minus_a / (1 + e(-x)) - minus_a
+     */
     public double customSigmoid(double x) {
-        double a = 1.7159;
-        double b = 2/3;
-        return a * Math.atan(b*x);
+        Integer a = -bipolar;
+        Integer b = 1;
+        return (b - a) / (1 + Math.exp(-x)) + a;
     }
 
     @Override
@@ -159,16 +163,6 @@ public class NeuralNet implements NeuralNetInterface {
                 hiddenWeights[i][j] = 0;
             }
         }
-    }
-
-    public double customSigmoidDerivative(double x) {
-        double b = 2/3;
-        double a = 1.7159;
-        return b * a / (1 + Math.pow(b * x, 2));
-    }
-
-    public double sigmoidDerivativeFromOutput(double output) {
-        return output * (1 - output);
     }
 
     public double[] getOutputWeights() {
