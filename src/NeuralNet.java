@@ -8,10 +8,12 @@ public class NeuralNet implements NeuralNetInterface {
     private int inputNum;
     private double[] inputs;
     private double [] hiddenOutput;
+    private double [] prevOutputWeights;
+    private double [][] prevHiddenWeights;
     private double [] outputWeights;
     private double [][] hiddenWeights;
     private double output;
-    private final int bipolar = 1;
+    private final int bipolar = 0;
 
     private final int hiddenNum = 4;
     private final double learningRate = 0.2;
@@ -28,6 +30,9 @@ public class NeuralNet implements NeuralNetInterface {
 
         //Initialize weights to all 0
         zeroWeights();
+        initializeWeights();
+        prevOutputWeights = outputWeights;
+        prevHiddenWeights = hiddenWeights;
     }
 
     //forward propagation
@@ -44,20 +49,33 @@ public class NeuralNet implements NeuralNetInterface {
             for (int i = 0; i < hiddenNum; i++) {
                 hiddenOutput[i] = hiddenWeights[i][0] * bias;
                 for (int j = 1; j < inputNum + 1; j++) {
-                    hiddenOutput[i] += hiddenWeights[i][j] * inputs[j-1];
+                    hiddenOutput[i] += hiddenWeights[i][j] * inputs[j - 1];
                 }
+
                 // activation function
-                hiddenOutput[i] = sigmoid(hiddenOutput[i]);
+                if (bipolar == 1) {
+                    hiddenOutput[i] = customSigmoid(hiddenOutput[i]);
+                } else {
+                    hiddenOutput[i] = sigmoid(hiddenOutput[i]);
+                }
+
             }
 
             // compute the output layer
             double output = outputWeights[0] * bias;
             for (int i = 1; i < hiddenNum + 1; i++) {
-                output += outputWeights[i] * this.hiddenOutput[i-1];
+                output += outputWeights[i] * hiddenOutput[i-1];
             }
+
             // activation function
-            output = sigmoid(output);
+            if (bipolar == 1) {
+                output = customSigmoid(output);
+            } else {
+                output = sigmoid(output);
+            }
+
             this.output = output;
+
             return output;
         }
     }
@@ -71,13 +89,19 @@ public class NeuralNet implements NeuralNetInterface {
         // compute the output wight first then the hidden weights because bottom weights depends on top results
         // set the new weight for output neuron
         double newOutputWeights[] = new double[outputWeights.length];
-        // abstract the current output error
-        double outputError = output * (1 - output) * (argValue - output);
-//        double outputError = 0.5 * (1 - Math.pow(output, 2)) * (argValue - output);
+
+        // computer the  output error
+        double outputError;
+        if (bipolar == 1) {
+            outputError = (1 + output) * (1 - output) * (argValue - output);
+        } else {
+            outputError = output * (1 - output) * (argValue - output);
+        }
+
         // the part for bias term
-        newOutputWeights[0] = outputWeights[0] + learningRate * outputError * bias;
+        newOutputWeights[0] = outputWeights[0] + momentum * (outputWeights[0] - prevOutputWeights [0]) + learningRate * outputError * bias;
         for (int i = 1; i < hiddenNum + 1; i++) {
-            newOutputWeights[i] = outputWeights[i] + learningRate * outputError * hiddenOutput[i-1];
+            newOutputWeights[i] = outputWeights[i] + momentum * (outputWeights[i] - prevOutputWeights [i]) + learningRate * outputError * hiddenOutput[i-1];
         }
 
         // set the new weight for hidden neurons
@@ -86,16 +110,25 @@ public class NeuralNet implements NeuralNetInterface {
             // the part for bias term
             // use the new output weight
             double[] hiddenError = new double[hiddenNum];
-            hiddenError[i] = hiddenOutput[i] * (1 - hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
-//            hiddenError[i] = 0.5 * (1 - Math.pow(hiddenOutput[i], 2)) * outputError * newOutputWeights[i + 1];
-            newHiddenWeights[i][0] = hiddenWeights [i][0] + learningRate * hiddenError[i] * bias;
+
+            // compute hidden error
+            if (bipolar == 1) {
+                hiddenError[i] = 0.5 * (1 + hiddenOutput[i]) * (1 - hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
+            } else {
+                hiddenError[i] = hiddenOutput[i] * (1 - hiddenOutput[i]) * outputError * newOutputWeights[i + 1];
+            }
+
+            newHiddenWeights[i][0] = hiddenWeights [i][0] + momentum * (hiddenWeights[i][0] - prevHiddenWeights[i][0]) + learningRate * hiddenError[i] * bias;
             for (int j = 1; j < inputNum + 1; j++) {
-                newHiddenWeights[i][j] = hiddenWeights[i][j] + learningRate * hiddenError[i] * inputs[j-1];
+                newHiddenWeights[i][j] = hiddenWeights[i][j] + momentum * (hiddenWeights[i][j] - prevHiddenWeights[i][j]) + learningRate * hiddenError[i] * inputs[j-1];
             }
 
         }
 
         // change the weights in the field
+        prevOutputWeights = outputWeights;
+        prevHiddenWeights = hiddenWeights;
+
         outputWeights = newOutputWeights;
         hiddenWeights = newHiddenWeights;
 
@@ -103,7 +136,11 @@ public class NeuralNet implements NeuralNetInterface {
         outputFor(inputs);
 
         // compute the error
-        return output * (1 - output) * (argValue - output);
+        if (bipolar == 1) {
+            return (1 + output) * (1 - output) * (argValue - output);
+        } else {
+            return output * (1 - output) * (argValue - output);
+        }
     }
 
     @Override
@@ -130,7 +167,7 @@ public class NeuralNet implements NeuralNetInterface {
      * @return f(x) = b_minus_a / (1 + e(-x)) - minus_a
      */
     public double customSigmoid(double x) {
-        Integer a = -bipolar;
+        Integer a = -1;
         Integer b = 1;
         return (b - a) / (1 + Math.exp(-x)) + a;
     }
@@ -148,6 +185,9 @@ public class NeuralNet implements NeuralNetInterface {
                 hiddenWeights[i][j] = Math.random() - 0.5;
             }
         }
+
+        prevOutputWeights = outputWeights;
+        prevHiddenWeights = hiddenWeights;
     }
 
     @Override
