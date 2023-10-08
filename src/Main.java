@@ -5,7 +5,7 @@ public class Main {
         double targetAccuracy = 0.05;
         int loops = 1000;
         int bipolar = 0;
-        int upperlimit = 15000;
+        int upperLimit = 15000;
 
         double[][] inputSetsBi = {
                 {-1, -1},
@@ -55,7 +55,7 @@ public class Main {
 
             int i = 0;
             int h = 0;
-            while (h < upperlimit) {
+            while (h < upperLimit) {
                 if (computeLoss(inputs, outputs, neuralNet) > targetAccuracy) {
                     i++;
                 }
@@ -99,7 +99,7 @@ public class Main {
         }
         System.out.println("\nAverage: " + averageEpochs + '\n');
         double currentAvg = 0;
-        for (int j = 0; j < upperlimit; j++) {
+        for (int j = 0; j < upperLimit; j++) {
             for (int i = 0; i < average.size(); i++) {
                 currentAvg += average.get(i).get(j);
             }
