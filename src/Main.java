@@ -4,8 +4,8 @@ public class Main {
     public static void main(String[] args) {
         double targetAccuracy = 0.05;
         int loops = 1000;
-        int bipolar = 0;
-        int upperLimit = 15000;
+        int bipolar = 1;
+        int upperLimit = 500;
 
         double[][] inputSetsBi = {
                 {-1, -1},

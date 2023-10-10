@@ -13,11 +13,11 @@ public class NeuralNet implements NeuralNetInterface {
     private double [] outputWeights;
     private double [][] hiddenWeights;
     private double output;
-    private final int bipolar = 0;
+    private final int bipolar = 1;
 
     private final int hiddenNum = 4;
     private final double learningRate = 0.2;
-    private final double momentum = 0;
+    private final double momentum = 0.9;
     private final double errorTarget = 0.05;
 
     public NeuralNet(int inputNum) {
