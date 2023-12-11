@@ -3,7 +3,7 @@ import java.util.ArrayList;
 public class Main {
     public static void main(String[] args) {
         double targetAccuracy = 0.05;
-        int loops = 1000;
+        int loops = 1;
         int bipolar = 1;
         int upperLimit = 500;
 

@@ -93,7 +93,7 @@ public class NeuralNet implements NeuralNetInterface {
         // computer the  output error
         double outputError;
         if (bipolar == 1) {
-            outputError = (1 + output) * (1 - output) * (argValue - output);
+            outputError = 0.5 * (1 + output) * (1 - output) * (argValue - output);
         } else {
             outputError = output * (1 - output) * (argValue - output);
         }
